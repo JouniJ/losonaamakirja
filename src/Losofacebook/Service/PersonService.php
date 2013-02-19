@@ -4,6 +4,7 @@ namespace Losofacebook\Service;
 use Doctrine\DBAL\Connection;
 use Losofacebook\Person;
 use DateTime;
+use Memcached;
 
 use Doctrine\DBAL\Query\QueryBuilder;
 
@@ -13,9 +14,12 @@ use Doctrine\DBAL\Query\QueryBuilder;
 class PersonService extends AbstractService
 {
 
-    public function __construct(Connection $conn)
+    private $memcached;
+
+    public function __construct(Connection $conn, Memcached $memcached)
     {
         parent::__construct($conn, 'person');
+        $this->memcached = $memcached;
     }
 
 
@@ -46,11 +50,9 @@ class PersonService extends AbstractService
 
     public function findFriends($id)
     {
-        $friends = [];
-        foreach ($this->findFriendIds($id) as $friendId) {
-            $friends[] = $this->findById($friendId, false);
-        }
-        return $friends;
+        $apu = $this->findFriendIds($id);
+        $fby = $this->findBy(['id'=>$apu], [], false);
+        return $fby; 
     }
 
     /**
@@ -77,6 +79,14 @@ class PersonService extends AbstractService
 
     public function findFriendIds($id)
     {
+        
+        
+        if( $ids = $this->memcached->get("friend_ids_{$id}") ){
+            //echo 'here';exit;
+            return $ids;
+        }
+        
+        
         $myAdded = $this->conn->fetchAll(
             "SELECT target_id FROM friendship WHERE source_id = ?",
             [$id]
@@ -97,7 +107,9 @@ class PersonService extends AbstractService
             return $result;
         }, []);
 
-        return array_unique(array_merge($myAdded, $meAdded));
+        $ret = array_unique(array_merge($myAdded, $meAdded));
+        $this->memcached->set("friend_ids_{$id}", $ret, 60);
+        return $ret;
     }
 
     /**

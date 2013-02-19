@@ -17,6 +17,7 @@ use Symfony\Component\HttpKernel\Event\KernelEvent;
 use Silex\Provider\SessionServiceProvider;
 use Doctrine\DBAL\Query\QueryBuilder;
 
+
 $app = new Silex\Application();
 
 $app['debug'] = true;
@@ -58,12 +59,18 @@ $app->register(
 
 // Services
 
-$app['imageService'] = $app->share(function (Application $app) {
-    return new ImageService($app['db'], realpath(__DIR__ . '/data/images'));
+$app['memcached'] = $app->share(function (Application $app) {
+    $m = new Memcached();
+    $m->addServer('localhost', 11211);
+    return $m;
 });
 
 $app['personService'] = $app->share(function (Application $app) {
-    return new PersonService($app['db']);
+    return new PersonService($app['db'], $app['memcached']);
+});
+
+$app['imageService'] = $app->share(function (Application $app) {
+    return new ImageService($app['db'], realpath(__DIR__ . '/data/images'));
 });
 
 $app['postService'] = $app->share(function (Application $app) {
@@ -94,7 +101,7 @@ $app->get('/api/person', function(Application $app, Request $request) {
     }
 
     $persons = $personService->findBy($params, [], false);
-
+    
     return new JsonResponse(
         $persons
     );
@@ -121,8 +128,12 @@ $app->get('/api/person/{username}/friend', function(Application $app, Request $r
 
     $params = $request->query->all();
 
+    $person = $personService->findFriendsBy($username, $params);
+    
+    //print_r($person);exit;
+    
     return new JsonResponse(
-        $personService->findFriendsBy($username, $params)
+        $person
     );
 
 });
