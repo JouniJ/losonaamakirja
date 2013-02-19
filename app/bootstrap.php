@@ -93,14 +93,14 @@ $app->get('/api/person', function(Application $app, Request $request) {
         }
     }
 
-    $persons = $personService->findBy($params, false);
+    $persons = $personService->findBy($params, [], false);
 
     return new JsonResponse(
         $persons
     );
 });
 
-
+// testing
 $app->get('/api/person/{username}', function(Application $app, $username) {
 
     /** @var PersonService $personService */
