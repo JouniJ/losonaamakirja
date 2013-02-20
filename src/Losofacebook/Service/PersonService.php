@@ -14,12 +14,10 @@ use Doctrine\DBAL\Query\QueryBuilder;
 class PersonService extends AbstractService
 {
 
-    private $memcached;
 
     public function __construct(Connection $conn, Memcached $memcached)
     {
-        parent::__construct($conn, 'person');
-        $this->memcached = $memcached;
+        parent::__construct($conn, 'person', $memcached);
     }
 
 
@@ -43,6 +41,10 @@ class PersonService extends AbstractService
      */
     public function findBy(array $params = [], $options = [], $fetchFriends = true)
     {
+        
+        //$trace=debug_backtrace();
+        //$caller=array_shift($trace);
+        //print_r($params);print_r($options);print_r($data);exit;
         return parent::findByParams($params, $options, function ($data) use ($fetchFriends) {
             return $this->createPerson($data, $fetchFriends);
         });
@@ -50,8 +52,13 @@ class PersonService extends AbstractService
 
     public function findFriends($id)
     {
-        $apu = $this->findFriendIds($id);
-        $fby = $this->findBy(['id'=>$apu], [], false);
+        if( $fby = $this->memcached->get("friends_{$id}") ){
+            //echo 'hereiam';exit;
+            return $fby;
+        }
+        
+        $fby = $this->findBy([ 'id' => $this->findFriendIds($id) ], [], false);
+        $this->memcached->set("friends_{$id}", $fby, 60);
         return $fby; 
     }
 
@@ -79,7 +86,6 @@ class PersonService extends AbstractService
 
     public function findFriendIds($id)
     {
-        
         
         if( $ids = $this->memcached->get("friend_ids_{$id}") ){
             //echo 'here';exit;

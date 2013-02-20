@@ -78,7 +78,7 @@ $app['postService'] = $app->share(function (Application $app) {
 });
 
 $app['companyService'] = $app->share(function (Application $app) {
-    return new CompanyService($app['db']);
+    return new CompanyService($app['db'], $app['memcached']);
 });
 
 

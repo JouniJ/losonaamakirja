@@ -97,9 +97,9 @@ class ImageService
         $img = new Imagick($this->basePath . '/' . $id);
         $thumb = clone $img;
 
-        $thumb->cropThumbnailimage(500, 500);
+        $thumb->cropThumbnailimage(150, 150);
         $thumb->setImageCompression(self::COMPRESSION_TYPE);
-        $thumb->setImageCompressionQuality(90);
+        $thumb->setImageCompressionQuality(30);
         $thumb->writeImage($this->basePath . '/' . $id . '-thumb');
     }
 
@@ -112,6 +112,7 @@ class ImageService
         }
 
         if (!is_readable($path)) {
+           
             throw new NotFoundHttpException('Image not found');
         }
 
